@@ -14,17 +14,18 @@ Created on Wed Jun 26 16:39:27 2019
 
 @author: Victor Rogalev
 """
-import sys, gc
+import gc
+import sys
 
-import PyQt5 as PyQt5
+import numpy as np
+import pandas as pd
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtWidgets import QFileDialog
-import numpy as np
-from UI_GUI_Plot import Ui_MainWindow
-import pandas as pd
-from NetworkGetPressure import NetworkGetPressure
+
 import List_Of_Servers as LoS
+from NetworkGetPressure import NetworkGetPressure
+from UI_GUI_Plot import Ui_MainWindow
 
 
 class PlotWindow(QWidget, Ui_MainWindow):
@@ -48,15 +49,7 @@ class PlotWindow(QWidget, Ui_MainWindow):
 
         """ connect all signals """
         for i in LoS.server_list.keys():
-            self.button()
-            pass
-
-        # self.button_AC.clicked.connect(lambda: self.load_file("AC"))
-        # self.button_DC.clicked.connect(lambda: self.load_file("DC"))
-        # self.button_PC.clicked.connect(lambda: self.load_file("PC"))
-        # self.button_He.clicked.connect(lambda: self.load_file("He"))
-        # self.button_LL.clicked.connect(lambda: self.load_file("LL"))
-        # self.button_TA.clicked.connect(lambda: self.load_file("TA"))
+            self.buttons_dict[i].clicked.connect(lambda: self.load_file(i))
         self.lineEdit_1.returnPressed.connect(lambda: self.change_n_points(self.lineEdit_1.text()))
         self.lineEdit_2.returnPressed.connect(lambda: self.change_channel(self.lineEdit_2.text()))
         self.load_button.clicked.connect(lambda: self.load_file())
@@ -79,8 +72,9 @@ class PlotWindow(QWidget, Ui_MainWindow):
             if server_name:
                 self.server_name = server_name[0]
                 print(self.server_name)
-                self.load_file_name = self.server_dictionary[self.server_name][3]
-                self.channel = int(self.server_dictionary[self.server_name][2])
+                self.load_file_name = str(self.server_name)+'-log-dynamic.dat'  # TODO: provide full path from log folder
+                print (self.load_file_name)
+                self.channel = int(LoS.server_list[self.server_name][4])
             else:
                 self.load_file_name = QFileDialog.getOpenFileName(self, 'Open file', '', '*.dat')[0]
         except:
