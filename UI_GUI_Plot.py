@@ -42,6 +42,7 @@ class Ui_MainWindow(object):
         self.sizePolicy.setHorizontalStretch(0)
         self.sizePolicy.setVerticalStretch(0)
 
+        """Create buttons according to List_Of_Servers.py and pack them into a dictionary"""
         self.buttons_dict = {}
         for i in LoS.server_list.keys():
             self.button = PyQt5.QtWidgets.QPushButton(self.layoutWidget)
@@ -52,7 +53,6 @@ class Ui_MainWindow(object):
             self.buttons_dict[i] = self.button
             self.v_layout_3.addWidget(self.button)
             self.button.setObjectName("button_"+i)
-            print (self.button.objectName())
             self.v_layout_3.addStretch()
 
         """ LOAD button """
@@ -72,7 +72,7 @@ class Ui_MainWindow(object):
         self.v_layout_3.addWidget(self.label_1)
 
         self.lineEdit_1 = PyQt5.QtWidgets.QLineEdit(self.layoutWidget)
-        self.lineEdit_1.setText("100")
+        self.lineEdit_1.setText("10")
         self.lineEdit_1.setGeometry(PyQt5.QtCore.QRect(500, 20, 50, 50))
         self.lineEdit_1.setFixedWidth
         self.sizePolicy.setHeightForWidth(self.lineEdit_1.sizePolicy().hasHeightForWidth())

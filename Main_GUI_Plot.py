@@ -14,9 +14,12 @@ Created on Wed Jun 26 16:39:27 2019
 
 @author: Victor Rogalev
 """
+import _thread
 import gc
+import logging
 import sys
 
+import PyQt5
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QTimer
@@ -38,18 +41,11 @@ class PlotWindow(QWidget, Ui_MainWindow):
         self.n_points = int(self.lineEdit_1.text())  # default N points to plot
         self.channel = 0  # channel number 0 or 1
         self.reload_flag = True  # flag that is used to reload data in LOAD LOG
-        self.channels_list = []  # TODO:
-        self.common_path = 'C:/Users/Preparation PC/Documents/Python scripts/Communication_LOG_SERVER/'
-        self.server_dictionary = {"AC": ['132.187.37.41', 63202, 0, self.common_path + 'Analysis-Log-Dynamic.dat'],
-                                  "DC": ['132.187.37.41', 63206, 1, self.common_path + 'DC-Log-Dynamic.dat'],
-                                  "PC": ['132.187.37.41', 63200, 1, self.common_path + 'Preparation-Log-Dynamic.dat'],
-                                  "He": ['132.187.37.41', 63201, 1, self.common_path + 'LL_He-Log-Dynamic.dat'],
-                                  "LL": ['132.187.37.41', 63201, 0, self.common_path + 'LL_He-Log-Dynamic.dat'],
-                                  "TA": ['132.187.37.41', 63205, 0, self.common_path + 'Lakeshore331-Log-Dynamic.dat']}
-
+        self.common_path = 'C:/Users/Preparation PC/Documents/Python scripts/Communication_LOG_SERVER_2020/'
         """ connect all signals """
-        for i in LoS.server_list.keys():
-            self.buttons_dict[i].clicked.connect(lambda: self.load_file(i))
+        for i in self.buttons_dict:
+            """ direct construction of lambda with argument and state of the button (not used but has to be there) """
+            self.buttons_dict[i].clicked.connect(lambda state, b=i: self.load_file(b))
         self.lineEdit_1.returnPressed.connect(lambda: self.change_n_points(self.lineEdit_1.text()))
         self.lineEdit_2.returnPressed.connect(lambda: self.change_channel(self.lineEdit_2.text()))
         self.load_button.clicked.connect(lambda: self.load_file())
@@ -72,8 +68,8 @@ class PlotWindow(QWidget, Ui_MainWindow):
             if server_name:
                 self.server_name = server_name[0]
                 print(self.server_name)
-                self.load_file_name = str(self.server_name)+'-log-dynamic.dat'  # TODO: provide full path from log folder
-                print (self.load_file_name)
+                self.load_file_name = str(self.common_path) + str(self.server_name) + '-log-dynamic.dat'  # TODO: provide full path from log folder
+                print(self.load_file_name)
                 self.channel = int(LoS.server_list[self.server_name][4])
             else:
                 self.load_file_name = QFileDialog.getOpenFileName(self, 'Open file', '', '*.dat')[0]
@@ -87,11 +83,19 @@ class PlotWindow(QWidget, Ui_MainWindow):
             #            self.channels_list = list(self.loaded_data) # should return column names!
             f.close()
         except:
+            self.loaded_data = []
             print("error loading file")
             pass
 
         """ Exctract necessary n_points from self.channel from panda frame """
-        self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
+        if self.loaded_data:
+            self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
+        else:
+            self.data_to_display = np.array([])
+        # try:
+        #     self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
+        # except:
+        #     self.data_to_
 
         """ Start the server client or run the timer to reload data from log file """
         if server_name:
@@ -107,12 +111,13 @@ class PlotWindow(QWidget, Ui_MainWindow):
         to obtain pressure/temp values from the corresponding server.
         Server_dictionary is used to obtain connection parameters.
         """
-        print(server_name)
+        print("connecting to server ", server_name)
         self.reload_flag = False
-        self.host = self.server_dictionary[server_name][0]
-        self.port = int(self.server_dictionary[server_name][1])
-        self.channel = int(self.server_dictionary[server_name][2])
+        self.host = LoS.server_list[self.server_name][0]
+        self.port = int(LoS.server_list[self.server_name][1])
+        self.channel = int(LoS.server_list[self.server_name][4])
         self.networking = NetworkGetPressure(self.host, self.port)  # thread
+        # _thread.start_new_thread(NetworkGetPressure, (self.host, self.port))
         self.networking.new_value_trigger.connect(self.update_data_to_display)
         self.networking.start()  # start this thread to get pressure
         gc.collect()
@@ -135,7 +140,11 @@ class PlotWindow(QWidget, Ui_MainWindow):
         except:
             pass
         """ Append the value from server to the data which we display (with shift) """
-        self.data_to_display = np.append(self.data_to_display, self.pressure)[1:]
+        if len(self.data_to_display) >= self.n_points:
+            self.data_to_display = np.append(self.data_to_display, self.pressure)[1:]
+        else:
+            self.data_to_display = np.append(self.data_to_display, self.pressure)
+
         self.update_plot()  # call the plot update function
 
     def update_plot(self):
@@ -198,15 +207,19 @@ class PlotWindow(QWidget, Ui_MainWindow):
     def stop(self):
         try:
             self.timer_update.stop()
+        except Exception as e:
+            logging.exception(e)
+            print(e)
+        try:
+            self.data_to_display = np.array([])
         except:
             pass
         try:
-            self.data_to_display = []
-        except:
-            pass
-        try:
-            self.networking.close()
-        except:
+            self.networking.quit()
+            self.networking.wait()
+        except Exception as e:
+            logging.exception(e)
+            print (e)
             pass
 
     def __del__(self):
