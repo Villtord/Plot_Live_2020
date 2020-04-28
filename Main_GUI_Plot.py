@@ -67,8 +67,11 @@ class PlotWindow(QWidget, Ui_MainWindow):
         try:
             if server_name:
                 self.server_name = server_name[0]
-                print(self.server_name)
-                self.load_file_name = str(self.common_path) + str(self.server_name) + '-log-dynamic.dat'  # TODO: provide full path from log folder
+                self.port = LoS.server_list[self.server_name][1]
+                self.servers_with_port = [k for k,v in LoS.server_list.items() if v[1] == self.port]  # return servers with this port
+                print (self.servers_with_port)
+                # TODO: provide full path from log folder
+                self.load_file_name = str(self.common_path) + str(self.servers_with_port[0]) + '-log-dynamic.dat'  # takes the first server log with this port
                 print(self.load_file_name)
                 self.channel = int(LoS.server_list[self.server_name][4])
             else:
@@ -80,7 +83,6 @@ class PlotWindow(QWidget, Ui_MainWindow):
         try:
             with open(self.load_file_name, 'rb') as f:
                 self.loaded_data = pd.read_csv(f, sep=",")
-            #            self.channels_list = list(self.loaded_data) # should return column names!
             f.close()
         except:
             self.loaded_data = []
@@ -88,14 +90,10 @@ class PlotWindow(QWidget, Ui_MainWindow):
             pass
 
         """ Exctract necessary n_points from self.channel from panda frame """
-        if self.loaded_data:
+        if not self.loaded_data.empty:
             self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
         else:
             self.data_to_display = np.array([])
-        # try:
-        #     self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
-        # except:
-        #     self.data_to_
 
         """ Start the server client or run the timer to reload data from log file """
         if server_name:
@@ -117,7 +115,6 @@ class PlotWindow(QWidget, Ui_MainWindow):
         self.port = int(LoS.server_list[self.server_name][1])
         self.channel = int(LoS.server_list[self.server_name][4])
         self.networking = NetworkGetPressure(self.host, self.port)  # thread
-        # _thread.start_new_thread(NetworkGetPressure, (self.host, self.port))
         self.networking.new_value_trigger.connect(self.update_data_to_display)
         self.networking.start()  # start this thread to get pressure
         gc.collect()
@@ -232,6 +229,7 @@ class PlotWindow(QWidget, Ui_MainWindow):
     def closeEvent(self, event):
         try:
             self.__del__()
+            self.stop()
         except:
             print("error killing timer")
         event.accept()
