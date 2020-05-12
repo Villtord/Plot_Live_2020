@@ -90,7 +90,7 @@ class PlotWindow(QWidget, Ui_MainWindow):
             pass
 
         """ Exctract necessary n_points from self.channel from panda frame """
-        if not self.loaded_data.empty:
+        if len(self.loaded_data) != 0:
             self.data_to_display = np.array(self.loaded_data.tail(self.n_points).iloc[1:, self.channel + 1])
         else:
             self.data_to_display = np.array([])
@@ -135,6 +135,7 @@ class PlotWindow(QWidget, Ui_MainWindow):
                 else:
                     pass
         except:
+            self.pressure = 0.0
             pass
         """ Append the value from server to the data which we display (with shift) """
         if len(self.data_to_display) >= self.n_points:
@@ -162,6 +163,14 @@ class PlotWindow(QWidget, Ui_MainWindow):
             except:
                 print("error loading data")
                 pass
+        """Check the data prior plot"""
+        for i in range(len(self.data_to_display)):
+            try:
+                self.data_to_display[i] = float(self.data_to_display[i])
+            except:
+                self.data_to_display[i] = 0.0
+                pass
+
         """ Update plot """
         try:
             self.plot_T.clear()
